@@ -2,8 +2,8 @@ services:
   - type: web
     name: yopo-catalog
     env: static
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    buildCommand: echo "No build needed - static HTML"
+    staticPublishPath: ./
     routes:
       - type: rewrite
         source: /*

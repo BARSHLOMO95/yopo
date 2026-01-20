@@ -1,184 +1,126 @@
-# THE GALLERY - קטלוג מוצרים
+# קטלוג מוצרים - Hebrew Product Catalog
 
-אתר קטלוג מוצרים מתקדם עם אפשרות להעלאת תמונות ולינקים לרכישה, בנוי עם React ו-Firebase.
+קטלוג מוצרים פשוט ומהיר בעברית, ללא צורך בהתקנות או build process.
 
-## תכונות
+## ✨ תכונות
 
-- ✨ ממשק משתמש מודרני ומעוצב (RTL)
-- 📁 ניהול קטגוריות עם תמונות תצוגה
-- 🖼️ העלאה מרובה של תמונות
-- 🗜️ דחיסה אוטומטית של תמונות
-- 🔗 קישורים לרכישה לכל קטגוריה
-- 🔒 מצב ניהול מאובטח
-- 📱 Responsive - מתאים לכל המכשירים
-- ⚡ מהיר ואופטימלי
+- 🎨 ממשק משתמש מודרני ונקי (RTL - עברית)
+- 📦 ניהול מוצרים וגלריות תמונות
+- 🖼️ העלאת תמונות מהמחשב או מקישורים (כולל Yupoo)
+- 💾 שמירה מקומית ב-LocalStorage (ללא צורך בשרת)
+- 🔒 מצב צפייה ללקוחות ומצב עריכה למנהל
+- 💧 ווטרמרק מותאם אישית על התמונות
+- 📱 WhatsApp שיתוף ישיר
+- 📲 מתאים לכל המכשירים (Responsive)
+- ⚡ מהיר וקל - קובץ HTML יחיד ללא תלויות
 
-## התקנה
+## 🚀 התקנה מהירה
 
-### 1. שכפל את הפרויקט
+### אופציה 1: Render (מומלץ - חינם)
+
+1. Fork את הפרויקט או העלה ל-GitHub שלך
+2. התחבר ל-[Render.com](https://render.com)
+3. לחץ "New" > "Static Site"
+4. חבר את ה-Repository
+5. Render יזהה אוטומטית את `render.yaml`
+6. לחץ "Create Static Site"
+7. האתר יהיה זמין תוך דקות! 🎉
+
+### אופציה 2: Vercel
 
 ```bash
-git clone <repository-url>
+# התקן Vercel CLI
+npm i -g vercel
+
+# Deploy
 cd yopo
-```
-
-### 2. התקן תלויות
-
-```bash
-npm install
-```
-
-### 3. הגדר Firebase
-
-#### א. צור פרויקט Firebase:
-1. כנס ל-[Firebase Console](https://console.firebase.google.com/)
-2. לחץ על "Add project" וצור פרויקט חדש
-3. הפעל **Firestore Database**:
-   - לך ל-Build > Firestore Database
-   - לחץ "Create database"
-   - בחר במיקום (לדוגמה: europe-west1)
-   - התחל במצב Test mode (או Production - תוכל לשנות לאחר מכן)
-
-4. הגדר **Authentication**:
-   - לך ל-Build > Authentication
-   - לחץ "Get started"
-   - הפעל "Anonymous" sign-in
-
-#### ב. קבל את פרטי ההתחברות:
-1. לך ל-Project Settings (הגלגל ליד Project Overview)
-2. גלול למטה ל-"Your apps"
-3. לחץ על "Web" (סמל </>)
-4. תן שם לאפליקציה ולחץ "Register app"
-5. העתק את ה-`firebaseConfig`
-
-#### ג. הגדר משתני סביבה:
-1. העתק את הקובץ `.env.example` ל-`.env`:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. מלא את הערכים בקובץ `.env` עם הפרטים מ-Firebase:
-   ```env
-   VITE_FIREBASE_API_KEY=AIza...
-   VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-   VITE_FIREBASE_PROJECT_ID=your-project-id
-   VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-   VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
-   VITE_FIREBASE_APP_ID=1:123456789:web:abc123
-   VITE_APP_ID=catalog-app
-   ```
-
-### 4. שנה את פרטי המנהל
-
-ערוך את הקובץ `src/App.jsx` ושנה את פרטי ההתחברות של המנהל:
-
-```javascript
-const ADMIN_EMAIL = "your-email@example.com";
-const ADMIN_PASS = "your-secure-password";
-```
-
-**חשוב:** זוהי דרך פשוטה לאימות. לאתר production מומלץ להשתמש ב-Firebase Authentication מלא.
-
-### 5. הרץ את הפרויקט
-
-```bash
-npm run dev
-```
-
-האתר יהיה זמין ב: `http://localhost:3000`
-
-## שימוש
-
-### כמשתמש רגיל:
-- גלוש בין קטגוריות
-- צפה בתמונות
-- לחץ על כפתור "לחץ כאן לרכישה" כדי לעבור לחנות
-
-### כמנהל:
-1. לחץ על כפתור "ניהול" בפינה השמאלית העליונה
-2. התחבר עם פרטי המנהל
-3. לחץ על "עריכה" כדי להיכנס למצב עריכה
-4. כעת תוכל:
-   - להוסיף קטגוריות חדשות
-   - לערוך שמות קטגוריות
-   - להעלות תמונות תצוגה לקטגוריות
-   - למחוק קטגוריות
-   - להעלות תמונות מוצרים (העלאה מרובה)
-   - להוסיף/לערוך קישורי רכישה
-   - למחוק תמונות
-
-## פריסה (Deployment)
-
-### Vercel:
-```bash
-npm run build
 vercel
 ```
 
-### Netlify:
+### אופציה 3: Netlify
+
 ```bash
-npm run build
-netlify deploy --prod --dir=dist
+# התקן Netlify CLI
+npm i -g netlify-cli
+
+# Deploy
+cd yopo
+netlify deploy --prod
 ```
 
-### Firebase Hosting:
-```bash
-npm run build
-firebase init hosting
-firebase deploy
-```
+### אופציה 4: GitHub Pages
 
-## מבנה הפרויקט
+1. לך ל-Settings > Pages
+2. בחר branch: `claude/hebrew-product-catalog-IyD1A`
+3. בחר `/` (root) כתיקייה
+4. שמור - האתר יהיה זמין ב-`https://[username].github.io/yopo`
+
+### אופציה 5: הרצה מקומית
+
+פשוט פתח את `index.html` בדפדפן! ✅
+
+## 📖 איך להשתמש?
+
+### למנהל:
+
+1. פתח את האתר (הגישה המלאה היא ברירת המחדל)
+2. לחץ "➕ מוצר חדש" כדי להוסיף מוצר
+3. הוסף תמונה ראשית, שם, מחיר, פרטים וקישור
+4. לחץ על מוצר כדי להוסיף עוד תמונות
+5. לחץ "⚙️ הגדרות" כדי להגדיר:
+   - שם הקטלוג
+   - ווטרמרק (טקסט והצגה/הסתרה)
+   - מספר WhatsApp
+
+### ללקוחות:
+
+1. לחץ על "🔗 קישור ללקוחות" בפינה השמאלית העליונה
+2. העתק את הקישור ושלח ללקוחות
+3. הלקוחות יראו את הקטלוג במצב צפייה בלבד
+4. הם יוכלו לצפות במוצרים ולהיכנס לקישורי הרכישה
+
+## 🎨 התאמה אישית
+
+ניתן לערוך את הקובץ `index.html` ישירות:
+
+- **צבעים**: חפש את ה-gradient colors בסגנון (למשל `#e91e63`, `#9c27b0`)
+- **פונטים**: שנה את `font-family: 'Heebo'` לפונט אחר
+- **ווטרמרק**: התאם את ה-CSS של `.watermark`
+
+## 📦 מבנה הפרויקט
 
 ```
 yopo/
-├── src/
-│   ├── App.jsx          # הקומפוננטה הראשית
-│   ├── firebase.js      # הגדרות Firebase
-│   ├── main.jsx         # נקודת כניסה
-│   └── index.css        # Tailwind CSS
-├── public/              # קבצים סטטיים
-├── .env.example         # דוגמה למשתני סביבה
-├── package.json         # תלויות
-├── vite.config.js       # הגדרות Vite
-└── tailwind.config.js   # הגדרות Tailwind
+├── index.html       # הקובץ היחיד - כל האפליקציה!
+├── render.yaml      # הגדרות Render
+├── .gitignore       # Git ignore
+└── README.md        # התיעוד הזה
 ```
 
-## טכנולוגיות
+## 🔧 טכנולוגיות
 
-- **React 18** - ספריית UI
-- **Vite** - Build tool מהיר
-- **Firebase** - Backend (Firestore + Authentication)
-- **Tailwind CSS** - עיצוב
-- **Lucide React** - אייקונים
+- HTML5
+- CSS3 (עם עיצוב מודרני)
+- Vanilla JavaScript
+- LocalStorage API
+- FileReader API
+- Google Fonts (Heebo)
 
-## אבטחה
+## 📝 רישיון
 
-**שים לב:** הקוד הנוכחי משתמש באימות פשוט (username/password) שמאוחסן בקוד. זה מתאים לפיתוח ולאתרים פרטיים בלבד.
+MIT License - חופשי לשימוש אישי ומסחרי.
 
-לאתר production מומלץ:
-1. להשתמש ב-Firebase Authentication עם Email/Password
-2. להגדיר Firestore Security Rules נכונות
-3. לא לאחסן סיסמאות בקוד
+## 💡 עצות
 
-### דוגמה ל-Firestore Rules:
+- **גיבוי**: הנתונים נשמרים ב-LocalStorage של הדפדפן. מומלץ לגבות מעת לעת (Export/Import יתווסף בעתיד)
+- **תמונות**: ניתן להעלות תמונות מהמחשב או לשלב קישורים מ-Yupoo
+- **ביצועים**: המערכת מהירה מאוד כי הכל מקומי, ללא שרתים
+- **אבטחה**: מצב הצפייה מבוסס על query parameter - לא מדובר באבטחה חזקה
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /artifacts/{appId}/public/data/{document=**} {
-      allow read: true;
-      allow write: if request.auth != null;
-    }
-  }
-}
-```
+## 🆘 תמיכה
 
-## תמיכה
+לשאלות ובעיות, פתח Issue ב-GitHub.
 
-לבעיות או שאלות, פתח issue בגיטהאב.
+---
 
-## רישיון
-
-MIT License - חופשי לשימוש מסחרי ופרטי.
+Made with ❤️ for small businesses

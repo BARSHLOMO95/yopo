@@ -1,13 +1,633 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>THE GALLERY - קטלוג מוצרים</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>קטלוג מוצרים</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Heebo', sans-serif; background: #f5f5f5; min-height: 100vh; }
+
+        .header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .header-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .logo { font-size: 24px; font-weight: 700; color: #333; cursor: pointer; }
+        .breadcrumb { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #666; margin-top: 5px; }
+        .breadcrumb a { color: #e91e63; text-decoration: none; }
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-family: 'Heebo', sans-serif; font-size: 14px; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, #e91e63, #9c27b0); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(233, 30, 99, 0.4); }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+
+        .product-info-header { background: #fff; margin: 20px auto; max-width: 1200px; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .info-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .main-thumbnail { width: 100px; height: 100px; border-radius: 8px; border: 2px solid #eee; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; overflow: hidden; }
+        .main-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+        .info-details { flex: 1; }
+        .product-title { font-size: 20px; font-weight: 600; color: #333; margin-bottom: 5px; }
+        .product-meta { color: #666; font-size: 14px; margin-bottom: 8px; }
+        .product-link { color: #4caf50; text-decoration: none; font-size: 14px; word-break: break-all; }
+        .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+        .action-btn { padding: 8px 16px; border: 1px solid #ddd; border-radius: 20px; background: #fff; color: #333; font-size: 13px; cursor: pointer; transition: all 0.3s; font-family: 'Heebo', sans-serif; }
+        .action-btn:hover { border-color: #4caf50; color: #4caf50; }
+
+        .gallery { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+
+        .product-card, .image-card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.3s; position: relative; }
+        .product-card { cursor: pointer; }
+        .product-card:hover, .image-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .product-card .image-wrapper, .image-card .image-wrapper { position: relative; aspect-ratio: 1; overflow: hidden; }
+        .product-card img, .image-card img { width: 100%; height: 100%; object-fit: cover; }
+
+        .image-count { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; }
+        .watermark { position: absolute; bottom: 10px; right: 10px; font-size: 32px; font-weight: 900; color: rgba(233, 30, 99, 0.7); text-shadow: 2px 2px 0 rgba(255, 235, 59, 0.8); font-style: italic; pointer-events: none; }
+
+        .card-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0; transition: opacity 0.3s; }
+        .product-card:hover .card-overlay, .image-card:hover .card-overlay { opacity: 1; }
+        .overlay-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: #fff; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; font-size: 16px; }
+        .overlay-btn:hover { transform: scale(1.1); }
+        .overlay-btn.delete { background: #f44336; color: white; }
+        .overlay-btn.view { background: #4caf50; color: white; }
+
+        .card-info { padding: 12px; }
+        .card-info h3 { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-info p { font-size: 12px; color: #999; }
+
+        .add-card { background: #fff; border: 2px dashed #ddd; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; cursor: pointer; transition: all 0.3s; }
+        .add-card:hover { border-color: #e91e63; background: #fce4ec; }
+        .add-card svg { width: 48px; height: 48px; color: #999; margin-bottom: 10px; }
+        .add-card:hover svg { color: #e91e63; }
+        .add-card span { color: #999; font-size: 14px; }
+        .add-card:hover span { color: #e91e63; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+        .modal.active { display: flex; }
+        .modal-content { background: #fff; border-radius: 16px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { font-size: 18px; font-weight: 600; }
+        .modal-close { width: 32px; height: 32px; border: none; background: #f0f0f0; border-radius: 50%; cursor: pointer; font-size: 16px; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; justify-content: flex-end; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #333; }
+        .form-group input { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: 'Heebo', sans-serif; }
+        .form-group input:focus { outline: none; border-color: #e91e63; }
+
+        .image-upload, .multi-upload-area { border: 2px dashed #ddd; border-radius: 8px; padding: 30px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .image-upload:hover, .multi-upload-area:hover { border-color: #e91e63; background: #fce4ec; }
+        .image-upload.has-image { padding: 10px; }
+        .image-upload img { max-width: 100%; max-height: 200px; border-radius: 8px; }
+        .image-upload svg, .multi-upload-area svg { width: 48px; height: 48px; color: #999; margin-bottom: 10px; }
+        .image-upload p, .multi-upload-area p { color: #666; font-size: 14px; }
+
+        .upload-preview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .preview-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; }
+        .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-item .remove-btn { position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; background: #f44336; color: white; border: none; border-radius: 50%; cursor: pointer; font-size: 12px; }
+
+        .lightbox { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 2000; align-items: center; justify-content: center; }
+        .lightbox.active { display: flex; }
+        .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; }
+        .lightbox-close { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; background: rgba(255,255,255,0.2); border: none; border-radius: 50%; color: white; font-size: 24px; cursor: pointer; }
+        .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: rgba(255,255,255,0.2); border: none; border-radius: 50%; color: white; font-size: 24px; cursor: pointer; }
+        .lightbox-nav.prev { left: 20px; }
+        .lightbox-nav.next { right: 20px; }
+
+        .settings-section { margin-bottom: 25px; }
+        .settings-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 15px; color: #333; }
+        .toggle-wrapper { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .toggle { width: 50px; height: 26px; background: #ddd; border-radius: 13px; position: relative; cursor: pointer; transition: background 0.3s; }
+        .toggle.active { background: #4caf50; }
+        .toggle::after { content: ''; position: absolute; width: 22px; height: 22px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .toggle.active::after { transform: translateX(24px); }
+        .watermark-preview { display: inline-block; padding: 10px 20px; background: #f5f5f5; border-radius: 8px; margin-top: 10px; }
+        .watermark-preview span { font-size: 24px; font-weight: 900; color: rgba(233, 30, 99, 0.7); text-shadow: 2px 2px 0 rgba(255, 235, 59, 0.8); font-style: italic; }
+
+        .page-view { display: none; }
+        .page-view.active { display: block; }
+
+        .upload-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+        .upload-tab { flex: 1; padding: 12px; border: 2px solid #eee; background: #fff; border-radius: 8px; cursor: pointer; font-family: 'Heebo', sans-serif; font-size: 14px; font-weight: 500; transition: all 0.3s; }
+        .upload-tab:hover { border-color: #e91e63; }
+        .upload-tab.active { border-color: #e91e63; background: #fce4ec; color: #e91e63; }
+        .upload-tab-content { display: none; }
+        .upload-tab-content.active { display: block; }
+        .url-input-wrapper { display: flex; flex-direction: column; gap: 10px; }
+        .url-input-wrapper textarea { width: 100%; min-height: 150px; padding: 12px; border: 2px dashed #ddd; border-radius: 8px; font-family: 'Heebo', sans-serif; font-size: 14px; resize: vertical; transition: border-color 0.3s; }
+        .url-input-wrapper textarea:focus { outline: none; border-color: #e91e63; }
+        .url-input-wrapper textarea::placeholder { color: #999; }
+        .cover-upload-tabs { display: flex; gap: 5px; margin-bottom: 10px; }
+        .cover-tab { padding: 8px 15px; border: 1px solid #eee; background: #fff; border-radius: 6px; cursor: pointer; font-family: 'Heebo', sans-serif; font-size: 13px; transition: all 0.3s; }
+        .cover-tab:hover { border-color: #e91e63; }
+        .cover-tab.active { border-color: #e91e63; background: #fce4ec; color: #e91e63; }
+        .cover-tab-content { display: none; }
+        .cover-tab-content.active { display: block; }
+        .url-single-input { display: flex; gap: 10px; margin-bottom: 10px; }
+        .url-single-input input { flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .url-single-input input:focus { outline: none; border-color: #e91e63; }
+        .cover-preview { text-align: center; }
+        .cover-preview img { max-width: 100%; max-height: 150px; border-radius: 8px; margin-top: 10px; }
+
+        .buy-button { display: inline-block; margin-top: 12px; padding: 12px 30px; background: linear-gradient(135deg, #4caf50, #2e7d32); color: white; text-decoration: none; border-radius: 25px; font-weight: 600; font-size: 16px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3); }
+        .buy-button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4); }
+        .buy-button.hidden { display: none; }
+
+        body.view-only .admin-only { display: none !important; }
+        body.view-only #adminActions { display: none !important; }
+        body.view-only .card-overlay { display: none !important; }
+        body.view-only .add-card { display: none !important; }
+
+        .view-only-banner { background: linear-gradient(135deg, #667eea, #764ba2); color: white; text-align: center; padding: 10px; font-size: 14px; }
+        .view-only-banner a { color: #ffd700; margin-right: 10px; }
+
+        @media (max-width: 600px) {
+            .gallery { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
+            .upload-preview { grid-template-columns: repeat(3, 1fr); }
+            .header-content { flex-direction: column; text-align: center; }
+            .product-info-header { margin: 10px; }
+            .info-row { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="view-only-banner" id="viewOnlyBanner" style="display:none;">
+        📖 מצב צפייה בלבד | <a href="#" onclick="exitViewOnly()">כניסה כמנהל</a>
+    </div>
+    <header class="header">
+        <div class="header-content">
+            <div>
+                <div class="logo" onclick="goHome()">🛍️ הקטלוג שלי</div>
+                <div class="breadcrumb" id="breadcrumb"></div>
+            </div>
+            <div class="header-actions" id="adminActions">
+                <button class="btn btn-secondary" onclick="openSettings()">⚙️ הגדרות</button>
+                <button class="btn btn-secondary" onclick="copyViewOnlyLink()">🔗 קישור ללקוחות</button>
+                <button class="btn btn-primary" id="mainAddBtn" onclick="openAddProductModal()">➕ מוצר חדש</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="page-view active" id="productsPage">
+        <div class="gallery" id="productsGallery"></div>
+    </div>
+
+    <div class="page-view" id="productDetailPage">
+        <div class="product-info-header">
+            <div class="info-row">
+                <div class="main-thumbnail" id="productThumbnail">תמונה</div>
+                <div class="info-details">
+                    <h1 class="product-title" id="productTitle">שם המוצר</h1>
+                    <p class="product-meta" id="productMeta"></p>
+                    <a href="#" class="product-link" id="productLink" target="_blank"></a>
+                    <a href="#" class="buy-button" id="buyButton" target="_blank">🛒 לרכישה</a>
+                </div>
+            </div>
+            <div class="action-buttons admin-only">
+                <button class="action-btn" onclick="editCurrentProduct()">✏️ ערוך פרטים</button>
+                <button class="action-btn" onclick="openAddImagesModal()">📷 הוסף תמונות</button>
+                <button class="action-btn" onclick="copyProductLink()">📋 העתק קישור</button>
+                <button class="action-btn" onclick="shareProductWhatsApp()">📱 שתף בוואטסאפ</button>
+            </div>
+        </div>
+        <div class="gallery" id="imagesGallery"></div>
+    </div>
+
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="productModalTitle">מוצר חדש</h2>
+                <button class="modal-close" onclick="closeProductModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>תמונה ראשית</label>
+                    <div class="cover-upload-tabs">
+                        <button type="button" class="cover-tab active" onclick="switchCoverTab('file')">📁 קובץ</button>
+                        <button type="button" class="cover-tab" onclick="switchCoverTab('url')">🔗 קישור</button>
+                    </div>
+                    <div class="cover-tab-content active" id="coverFileTab">
+                        <div class="image-upload" id="productImageUpload" onclick="document.getElementById('productImageInput').click()">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            <p>לחץ להעלאת תמונה</p>
+                        </div>
+                        <input type="file" id="productImageInput" accept="image/*" style="display:none" onchange="handleProductImageUpload(event)">
+                    </div>
+                    <div class="cover-tab-content" id="coverUrlTab">
+                        <div class="url-single-input">
+                            <input type="url" id="coverImageUrl" placeholder="הדבק קישור לתמונה...">
+                            <button type="button" class="btn btn-secondary" onclick="loadCoverFromUrl()">טען</button>
+                        </div>
+                        <div class="cover-preview" id="coverPreview"></div>
+                    </div>
+                </div>
+                <div class="form-group"><label>שם המוצר / קוד</label><input type="text" id="productNameInput" placeholder="לדוגמה: P8034 NB9060"></div>
+                <div class="form-group"><label>מחיר</label><input type="text" id="productPriceInput" placeholder="לדוגמה: 59.99$"></div>
+                <div class="form-group"><label>פרטים נוספים</label><input type="text" id="productDetailsInput" placeholder="לדוגמה: מידות 36-45 | 27 צבעים"></div>
+                <div class="form-group"><label>קישור</label><input type="url" id="productLinkInput" placeholder="https://..."></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeProductModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveProduct()">שמור</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="imagesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>הוסף תמונות</h2>
+                <button class="modal-close" onclick="closeImagesModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-tabs">
+                    <button class="upload-tab active" onclick="switchUploadTab('file')">📁 מהמכשיר</button>
+                    <button class="upload-tab" onclick="switchUploadTab('url')">🔗 מקישור</button>
+                </div>
+                <div class="upload-tab-content active" id="fileUploadTab">
+                    <div class="multi-upload-area" onclick="document.getElementById('multiImageInput').click()">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <p>לחץ לבחירת תמונות (ניתן לבחור מספר תמונות)</p>
+                    </div>
+                    <input type="file" id="multiImageInput" accept="image/*" multiple style="display:none" onchange="handleMultiImageUpload(event)">
+                </div>
+                <div class="upload-tab-content" id="urlUploadTab">
+                    <div class="url-input-wrapper">
+                        <textarea id="imageUrlsInput" placeholder="הדבק קישורים לתמונות (כל קישור בשורה חדשה)&#10;&#10;לדוגמה:&#10;https://photo.yupoo.com/xxx/image1.jpg&#10;https://photo.yupoo.com/xxx/image2.jpg"></textarea>
+                        <button class="btn btn-secondary" onclick="addImagesFromUrls()">הוסף קישורים</button>
+                    </div>
+                </div>
+                <div class="upload-preview" id="uploadPreview"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeImagesModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveImages()">הוסף תמונות</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>הגדרות קטלוג</h2>
+                <button class="modal-close" onclick="closeSettings()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>פרטי קטלוג</h3>
+                    <div class="form-group"><label>שם הקטלוג</label><input type="text" id="settingsCatalogName" placeholder="שם הקטלוג"></div>
+                </div>
+                <div class="settings-section">
+                    <h3>ווטרמרק</h3>
+                    <div class="toggle-wrapper"><span>הצג ווטרמרק</span><div class="toggle active" id="watermarkToggle" onclick="toggleWatermark()"></div></div>
+                    <div class="form-group"><label>טקסט ווטרמרק</label><input type="text" id="watermarkText" placeholder="TL" value="TL" oninput="updateWatermarkPreview()"></div>
+                    <div class="watermark-preview"><span id="watermarkPreview">TL</span></div>
+                </div>
+                <div class="settings-section">
+                    <h3>WhatsApp</h3>
+                    <div class="form-group"><label>מספר וואטסאפ</label><input type="text" id="whatsappNumber" placeholder="+972501234567"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSettings()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveSettings()">שמור הגדרות</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <button class="lightbox-nav prev" onclick="prevImage()">❮</button>
+        <img src="" alt="" id="lightboxImage">
+        <button class="lightbox-nav next" onclick="nextImage()">❯</button>
+    </div>
+
+    <script>
+        let products = [];
+        let currentProductIndex = null;
+        let editingProductIndex = null;
+        let tempProductImage = null;
+        let tempImages = [];
+        let lightboxImages = [];
+        let lightboxIndex = 0;
+        let settings = { catalogName: 'הקטלוג שלי', watermarkEnabled: true, watermarkText: 'TL', whatsappNumber: '' };
+        let isViewOnly = false;
+
+        function checkViewOnlyMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            isViewOnly = urlParams.get('view') === '1';
+            if (isViewOnly) {
+                document.body.classList.add('view-only');
+                document.getElementById('viewOnlyBanner').style.display = 'block';
+            }
+        }
+
+        function copyViewOnlyLink() {
+            const baseUrl = window.location.href.split('?')[0];
+            const viewUrl = baseUrl + '?view=1';
+            navigator.clipboard.writeText(viewUrl).then(() => {
+                alert('קישור לצפייה הועתק!\n\nשתף את הקישור הזה עם הלקוחות:\n' + viewUrl);
+            });
+        }
+
+        function exitViewOnly() {
+            window.location.href = window.location.href.split('?')[0];
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('catalogProducts_v2');
+            const savedSettings = localStorage.getItem('catalogSettings_v2');
+            if (saved) { products = JSON.parse(saved); renderProducts(); }
+            if (savedSettings) { settings = { ...settings, ...JSON.parse(savedSettings) }; document.querySelector('.logo').innerHTML = '🛍️ ' + settings.catalogName; }
+        }
+
+        function saveData() {
+            localStorage.setItem('catalogProducts_v2', JSON.stringify(products));
+            localStorage.setItem('catalogSettings_v2', JSON.stringify(settings));
+        }
+
+        function goHome() {
+            currentProductIndex = null;
+            document.getElementById('productsPage').classList.add('active');
+            document.getElementById('productDetailPage').classList.remove('active');
+            document.getElementById('breadcrumb').innerHTML = '';
+            document.getElementById('mainAddBtn').textContent = '➕ מוצר חדש';
+            document.getElementById('mainAddBtn').onclick = openAddProductModal;
+            renderProducts();
+        }
+
+        function viewProduct(index) {
+            currentProductIndex = index;
+            const product = products[index];
+            document.getElementById('productsPage').classList.remove('active');
+            document.getElementById('productDetailPage').classList.add('active');
+            document.getElementById('breadcrumb').innerHTML = `<a href="#" onclick="goHome(); return false;">ראשי</a><span>›</span><span>${product.name}</span>`;
+            document.getElementById('mainAddBtn').textContent = '📷 הוסף תמונות';
+            document.getElementById('mainAddBtn').onclick = openAddImagesModal;
+            updateProductInfo();
+            renderProductImages();
+        }
+
+        function updateProductInfo() {
+            const product = products[currentProductIndex];
+            document.getElementById('productTitle').textContent = product.name;
+            document.getElementById('productMeta').textContent = [product.price, product.details].filter(Boolean).join(' | ') + ` | ${product.images.length} תמונות`;
+            const linkEl = document.getElementById('productLink');
+            const buyBtn = document.getElementById('buyButton');
+            if (product.link) {
+                linkEl.href = product.link;
+                linkEl.textContent = product.link;
+                linkEl.style.display = isViewOnly ? 'none' : 'block';
+                buyBtn.href = product.link;
+                buyBtn.classList.remove('hidden');
+            } else {
+                linkEl.style.display = 'none';
+                buyBtn.classList.add('hidden');
+            }
+            const thumbnail = document.getElementById('productThumbnail');
+            if (product.coverImage) { thumbnail.innerHTML = `<img src="${product.coverImage}">`; }
+            else if (product.images.length > 0) { thumbnail.innerHTML = `<img src="${product.images[0]}">`; }
+            else { thumbnail.innerHTML = 'תמונה'; }
+        }
+
+        function renderProducts() {
+            const gallery = document.getElementById('productsGallery');
+            gallery.innerHTML = '';
+            products.forEach((product, index) => {
+                const coverImg = product.coverImage || (product.images.length > 0 ? product.images[0] : '');
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div class="image-wrapper">
+                        ${coverImg ? `<img src="${coverImg}">` : '<div style="background:#f0f0f0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#999;">אין תמונה</div>'}
+                        <div class="image-count">📷 ${product.images.length}</div>
+                        <div class="card-overlay">
+                            <button class="overlay-btn view" onclick="event.stopPropagation(); viewProduct(${index})">👁️</button>
+                            <button class="overlay-btn" onclick="event.stopPropagation(); editProduct(${index})">✏️</button>
+                            <button class="overlay-btn delete" onclick="event.stopPropagation(); deleteProduct(${index})">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="card-info"><h3>${product.name}</h3><p>${product.price || ''}</p></div>
+                `;
+                card.onclick = () => viewProduct(index);
+                gallery.appendChild(card);
+            });
+            const addCard = document.createElement('div');
+            addCard.className = 'add-card';
+            addCard.onclick = openAddProductModal;
+            addCard.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>הוסף מוצר חדש</span>`;
+            gallery.appendChild(addCard);
+        }
+
+        function renderProductImages() {
+            const gallery = document.getElementById('imagesGallery');
+            gallery.innerHTML = '';
+            const product = products[currentProductIndex];
+            product.images.forEach((img, index) => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                card.innerHTML = `
+                    <div class="image-wrapper">
+                        <img src="${img}" onclick="openLightbox(${index})">
+                        ${settings.watermarkEnabled ? `<div class="watermark">${settings.watermarkText}</div>` : ''}
+                        <div class="card-overlay"><button class="overlay-btn delete" onclick="deleteImage(${index})">🗑️</button></div>
+                    </div>
+                    <div class="card-info">תמונה ${index + 1}</div>
+                `;
+                gallery.appendChild(card);
+            });
+            const addCard = document.createElement('div');
+            addCard.className = 'add-card';
+            addCard.onclick = openAddImagesModal;
+            addCard.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>הוסף תמונות</span>`;
+            gallery.appendChild(addCard);
+        }
+
+        function openAddProductModal() {
+            editingProductIndex = null; tempProductImage = null;
+            document.getElementById('productModalTitle').textContent = 'מוצר חדש';
+            document.getElementById('productNameInput').value = '';
+            document.getElementById('productPriceInput').value = '';
+            document.getElementById('productDetailsInput').value = '';
+            document.getElementById('productLinkInput').value = '';
+            document.getElementById('coverImageUrl').value = '';
+            document.getElementById('coverPreview').innerHTML = '';
+            switchCoverTab('file');
+            const imageUpload = document.getElementById('productImageUpload');
+            imageUpload.classList.remove('has-image');
+            imageUpload.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><p>לחץ להעלאת תמונה</p>`;
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        function switchCoverTab(tab) {
+            document.querySelectorAll('.cover-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.cover-tab-content').forEach(c => c.classList.remove('active'));
+            if (tab === 'file') {
+                document.querySelector('.cover-tab:first-child').classList.add('active');
+                document.getElementById('coverFileTab').classList.add('active');
+            } else {
+                document.querySelector('.cover-tab:last-child').classList.add('active');
+                document.getElementById('coverUrlTab').classList.add('active');
+            }
+        }
+
+        function loadCoverFromUrl() {
+            let url = document.getElementById('coverImageUrl').value.trim();
+            if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) { alert('נא להזין קישור תקין'); return; }
+            url = getProxyUrl(url);
+            tempProductImage = url;
+            document.getElementById('coverPreview').innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='<p style=color:red>שגיאה בטעינת התמונה</p>'">`;
+        }
+
+        function getProxyUrl(url) {
+            if (url.includes('yupoo.com') || url.includes('yupoo.cn') || url.includes('photo.yupoo')) {
+                return 'https://images.weserv.nl/?url=' + encodeURIComponent(url);
+            }
+            return url;
+        }
+
+        function editProduct(index) {
+            editingProductIndex = index;
+            const product = products[index];
+            document.getElementById('productModalTitle').textContent = 'ערוך מוצר';
+            document.getElementById('productNameInput').value = product.name;
+            document.getElementById('productPriceInput').value = product.price || '';
+            document.getElementById('productDetailsInput').value = product.details || '';
+            document.getElementById('productLinkInput').value = product.link || '';
+            document.getElementById('coverImageUrl').value = '';
+            document.getElementById('coverPreview').innerHTML = '';
+            tempProductImage = product.coverImage || (product.images.length > 0 ? product.images[0] : null);
+            switchCoverTab('file');
+            const imageUpload = document.getElementById('productImageUpload');
+            if (tempProductImage) { imageUpload.classList.add('has-image'); imageUpload.innerHTML = `<img src="${tempProductImage}">`; }
+            else { imageUpload.classList.remove('has-image'); imageUpload.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><p>לחץ להעלאת תמונה</p>`; }
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        function editCurrentProduct() { if (currentProductIndex !== null) editProduct(currentProductIndex); }
+        function closeProductModal() { document.getElementById('productModal').classList.remove('active'); editingProductIndex = null; tempProductImage = null; }
+
+        function handleProductImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => { tempProductImage = e.target.result; const imageUpload = document.getElementById('productImageUpload'); imageUpload.classList.add('has-image'); imageUpload.innerHTML = `<img src="${tempProductImage}">`; };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveProduct() {
+            const name = document.getElementById('productNameInput').value;
+            if (!name) { alert('נא להזין שם מוצר'); return; }
+            const productData = { name, price: document.getElementById('productPriceInput').value, details: document.getElementById('productDetailsInput').value, link: document.getElementById('productLinkInput').value, coverImage: tempProductImage, images: [] };
+            if (editingProductIndex !== null) { productData.images = products[editingProductIndex].images; products[editingProductIndex] = productData; if (currentProductIndex === editingProductIndex) updateProductInfo(); }
+            else { products.push(productData); }
+            saveData(); renderProducts(); closeProductModal();
+        }
+
+        function deleteProduct(index) { if (confirm('האם למחוק את המוצר וכל התמונות שלו?')) { products.splice(index, 1); saveData(); if (currentProductIndex === index) goHome(); else renderProducts(); } }
+
+        function openAddImagesModal() { tempImages = []; document.getElementById('uploadPreview').innerHTML = ''; document.getElementById('imageUrlsInput').value = ''; switchUploadTab('file'); document.getElementById('imagesModal').classList.add('active'); }
+        function closeImagesModal() { document.getElementById('imagesModal').classList.remove('active'); tempImages = []; }
+
+        function switchUploadTab(tab) {
+            document.querySelectorAll('.upload-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.upload-tab-content').forEach(c => c.classList.remove('active'));
+            if (tab === 'file') {
+                document.querySelector('.upload-tab:first-child').classList.add('active');
+                document.getElementById('fileUploadTab').classList.add('active');
+            } else {
+                document.querySelector('.upload-tab:last-child').classList.add('active');
+                document.getElementById('urlUploadTab').classList.add('active');
+            }
+        }
+
+        function addImagesFromUrls() {
+            const textarea = document.getElementById('imageUrlsInput');
+            const urls = textarea.value.split('\n').map(u => u.trim()).filter(u => u && (u.startsWith('http://') || u.startsWith('https://')));
+            if (urls.length === 0) { alert('נא להזין קישורים תקינים'); return; }
+            urls.forEach(url => {
+                const proxyUrl = getProxyUrl(url);
+                if (!tempImages.includes(proxyUrl)) tempImages.push(proxyUrl);
+            });
+            textarea.value = '';
+            renderUploadPreview();
+            switchUploadTab('file');
+        }
+
+        function handleMultiImageUpload(event) {
+            Array.from(event.target.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => { tempImages.push(e.target.result); renderUploadPreview(); };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = '';
+        }
+
+        function renderUploadPreview() {
+            const preview = document.getElementById('uploadPreview');
+            preview.innerHTML = '';
+            tempImages.forEach((img, index) => {
+                const item = document.createElement('div');
+                item.className = 'preview-item';
+                item.innerHTML = `<img src="${img}"><button class="remove-btn" onclick="removePreviewImage(${index})">✕</button>`;
+                preview.appendChild(item);
+            });
+        }
+
+        function removePreviewImage(index) { tempImages.splice(index, 1); renderUploadPreview(); }
+
+        function saveImages() {
+            if (tempImages.length === 0) { alert('נא לבחור לפחות תמונה אחת'); return; }
+            if (currentProductIndex !== null) { products[currentProductIndex].images.push(...tempImages); saveData(); renderProductImages(); updateProductInfo(); }
+            closeImagesModal();
+        }
+
+        function deleteImage(index) { if (confirm('האם למחוק את התמונה?')) { products[currentProductIndex].images.splice(index, 1); saveData(); renderProductImages(); updateProductInfo(); } }
+
+        function openLightbox(index) { lightboxImages = products[currentProductIndex].images; lightboxIndex = index; document.getElementById('lightboxImage').src = lightboxImages[lightboxIndex]; document.getElementById('lightbox').classList.add('active'); }
+        function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+        function prevImage() { lightboxIndex = (lightboxIndex - 1 + lightboxImages.length) % lightboxImages.length; document.getElementById('lightboxImage').src = lightboxImages[lightboxIndex]; }
+        function nextImage() { lightboxIndex = (lightboxIndex + 1) % lightboxImages.length; document.getElementById('lightboxImage').src = lightboxImages[lightboxIndex]; }
+
+        function openSettings() {
+            document.getElementById('settingsCatalogName').value = settings.catalogName;
+            document.getElementById('watermarkText').value = settings.watermarkText;
+            document.getElementById('whatsappNumber').value = settings.whatsappNumber || '';
+            document.getElementById('watermarkToggle').classList.toggle('active', settings.watermarkEnabled);
+            updateWatermarkPreview();
+            document.getElementById('settingsModal').classList.add('active');
+        }
+        function closeSettings() { document.getElementById('settingsModal').classList.remove('active'); }
+        function toggleWatermark() { document.getElementById('watermarkToggle').classList.toggle('active'); }
+        function updateWatermarkPreview() { document.getElementById('watermarkPreview').textContent = document.getElementById('watermarkText').value || 'TL'; }
+
+        function saveSettings() {
+            settings.catalogName = document.getElementById('settingsCatalogName').value || 'הקטלוג שלי';
+            settings.watermarkText = document.getElementById('watermarkText').value || 'TL';
+            settings.watermarkEnabled = document.getElementById('watermarkToggle').classList.contains('active');
+            settings.whatsappNumber = document.getElementById('whatsappNumber').value;
+            document.querySelector('.logo').innerHTML = '🛍️ ' + settings.catalogName;
+            saveData();
+            if (currentProductIndex !== null) renderProductImages();
+            closeSettings();
+        }
+
+        function copyProductLink() { const product = products[currentProductIndex]; if (product.link) { navigator.clipboard.writeText(product.link).then(() => alert('הקישור הועתק!')); } else { alert('לא הוגדר קישור למוצר'); } }
+        function shareProductWhatsApp() {
+            const product = products[currentProductIndex];
+            const text = `${product.name}\n${product.price || ''}\n${product.details || ''}\n${product.link || ''}`;
+            const url = settings.whatsappNumber ? `https://wa.me/${settings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        document.addEventListener('keydown', (e) => { if (document.getElementById('lightbox').classList.contains('active')) { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowLeft') nextImage(); if (e.key === 'ArrowRight') prevImage(); } });
+
+        checkViewOnlyMode();
+        loadData();
+    </script>
+</body>
 </html>
