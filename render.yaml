@@ -2,8 +2,7 @@ services:
   - type: web
     name: yopo-catalog
     env: static
-    buildCommand: echo "No build needed - static HTML"
-    staticPublishPath: ./
+    staticPublishPath: .
     routes:
       - type: rewrite
         source: /*
