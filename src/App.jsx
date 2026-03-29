@@ -8,7 +8,7 @@ import {
 import {
   Edit2, Check, Image as ImageIcon,
   Trash2, Upload, Plus, ChevronRight, LayoutGrid, X, ExternalLink, ShoppingCart, Maximize2, Lock, LogOut,
-  ChevronLeft, GripVertical
+  ChevronLeft, GripVertical, Layers
 } from 'lucide-react';
 import { db, auth, appId } from './firebase';
 
@@ -53,6 +53,10 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isCarouselView, setIsCarouselView] = useState(false);
+  const [showCarouselPostModal, setShowCarouselPostModal] = useState(false);
+  const [carouselPostImages, setCarouselPostImages] = useState([]);
+  const [carouselPostUploading, setCarouselPostUploading] = useState(false);
+  const [postSlideIndices, setPostSlideIndices] = useState({});
 
   // --- התחברות אוטומטית ---
   useEffect(() => {
@@ -129,6 +133,73 @@ const App = () => {
     } catch (err) {
       setError("שגיאה בהעלאת תמונה: " + err.message);
     }
+  };
+
+  const addCarouselPostToCloud = async (catId, images) => {
+    if (!isAdmin || !user || images.length === 0) return;
+    try {
+      const itemsCol = collection(db, 'artifacts', appId, 'public', 'data', 'categories', catId, 'items');
+      await addDoc(itemsCol, {
+        type: 'carousel',
+        images: images,
+        url: images[0],
+        createdAt: Date.now()
+      });
+    } catch (err) {
+      setError("שגיאה ביצירת פוסט קרוסלה: " + err.message);
+    }
+  };
+
+  const updateCarouselPostImages = async (itemId, newImages) => {
+    if (!isAdmin || !user || !currentCategoryId) return;
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'categories', currentCategoryId, 'items', itemId);
+      await setDoc(docRef, { images: newImages, url: newImages[0] || '' }, { merge: true });
+    } catch (err) {
+      setError("שגיאה בעדכון פוסט: " + err.message);
+    }
+  };
+
+  const handleCarouselPostImageAdd = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+    setCarouselPostUploading(true);
+    const newImages = [...carouselPostImages];
+    for (const file of files) {
+      try {
+        const base64 = await new Promise((r) => {
+          const reader = new FileReader();
+          reader.onloadend = () => r(reader.result);
+          reader.readAsDataURL(file);
+        });
+        const compressed = await compressImage(base64, 1000, 0.6);
+        newImages.push(compressed);
+      } catch (err) {
+        console.error("Upload error:", err);
+      }
+    }
+    setCarouselPostImages(newImages);
+    setCarouselPostUploading(false);
+  };
+
+  const submitCarouselPost = async () => {
+    if (carouselPostImages.length < 2) {
+      setError("פוסט קרוסלה דורש לפחות 2 תמונות");
+      return;
+    }
+    setCarouselPostUploading(true);
+    await addCarouselPostToCloud(currentCategoryId, carouselPostImages);
+    setCarouselPostImages([]);
+    setShowCarouselPostModal(false);
+    setCarouselPostUploading(false);
+  };
+
+  const getPostSlideIndex = (itemId) => postSlideIndices[itemId] || 0;
+  const setPostSlideIndex = (itemId, index, totalImages) => {
+    let newIndex = index;
+    if (index < 0) newIndex = totalImages - 1;
+    else if (index >= totalImages) newIndex = 0;
+    setPostSlideIndices(prev => ({ ...prev, [itemId]: newIndex }));
   };
 
   const deleteProduct = async (prodId) => {
@@ -287,10 +358,18 @@ const App = () => {
                    {isCarouselView ? <><LayoutGrid size={16} /> גריד</> : <><GripVertical size={16} /> קרוסלה</>}
                  </button>
                  {isEditing && (
-                   <label className="cursor-pointer bg-black text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg active:scale-95">
-                     <Upload size={20} /> העלאה מרובה
-                     <input type="file" multiple accept="image/*" className="hidden" onChange={handleMultipleUpload} />
-                   </label>
+                   <div className="flex items-center gap-2">
+                     <button
+                       onClick={() => { setShowCarouselPostModal(true); setCarouselPostImages([]); }}
+                       className="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg active:scale-95 transition-all"
+                     >
+                       <Layers size={18} /> פוסט קרוסלה
+                     </button>
+                     <label className="cursor-pointer bg-black text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg active:scale-95">
+                       <Upload size={20} /> העלאה מרובה
+                       <input type="file" multiple accept="image/*" className="hidden" onChange={handleMultipleUpload} />
+                     </label>
+                   </div>
                  )}
                </div>
             </div>
@@ -411,16 +490,97 @@ const App = () => {
               /* --- תצוגת גריד --- */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {categoryItems.map((item) => (
-                  <div key={item.id} className="group relative bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 aspect-[3/2]">
-                    <img src={item.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 backdrop-blur-[1px]">
-                      {!isEditing ? (
-                        <button onClick={() => setSelectedImage(item.url)} className="bg-white text-black p-4 rounded-full shadow-2xl scale-90 group-hover:scale-100 transition-all"><Maximize2 size={24} /></button>
-                      ) : (
-                        <button onClick={() => deleteProduct(item.id)} className="bg-red-500 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all"><Trash2 size={24} /></button>
+                  item.type === 'carousel' && item.images?.length > 0 ? (
+                    /* --- כרטיס פוסט קרוסלה --- */
+                    <div key={item.id} className="group relative bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 aspect-[3/2]">
+                      {/* תמונות הקרוסלה */}
+                      <div className="relative w-full h-full">
+                        {item.images.map((img, imgIdx) => (
+                          <img
+                            key={imgIdx}
+                            src={img}
+                            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${
+                              imgIdx === getPostSlideIndex(item.id)
+                                ? 'opacity-100 scale-100'
+                                : 'opacity-0 scale-95'
+                            }`}
+                            alt=""
+                          />
+                        ))}
+                      </div>
+                      {/* חצי ניווט מיני */}
+                      {item.images.length > 1 && (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPostSlideIndex(item.id, getPostSlideIndex(item.id) + 1, item.images.length); }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-95 transition-all z-10"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPostSlideIndex(item.id, getPostSlideIndex(item.id) - 1, item.images.length); }}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-95 transition-all z-10"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
+                        </>
                       )}
+                      {/* נקודות אינדיקטור */}
+                      {item.images.length > 1 && (
+                        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
+                          {item.images.map((_, dotIdx) => (
+                            <button
+                              key={dotIdx}
+                              onClick={(e) => { e.stopPropagation(); setPostSlideIndex(item.id, dotIdx, item.images.length); }}
+                              className={`rounded-full transition-all duration-300 ${
+                                dotIdx === getPostSlideIndex(item.id)
+                                  ? 'w-6 h-2 bg-white shadow-lg'
+                                  : 'w-2 h-2 bg-white/50 hover:bg-white/80'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {/* תג קרוסלה */}
+                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 z-10">
+                        <Layers size={12} /> {getPostSlideIndex(item.id) + 1}/{item.images.length}
+                      </div>
+                      {/* אוברליי פעולות */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 backdrop-blur-[1px] z-20">
+                        {!isEditing ? (
+                          <button onClick={() => setSelectedImage(item.images[getPostSlideIndex(item.id)])} className="bg-white text-black p-4 rounded-full shadow-2xl scale-90 group-hover:scale-100 transition-all"><Maximize2 size={24} /></button>
+                        ) : (
+                          <div className="flex gap-3">
+                            <button onClick={() => {
+                              const newImages = item.images.filter((_, i) => i !== getPostSlideIndex(item.id));
+                              if (newImages.length === 0) { deleteProduct(item.id); }
+                              else {
+                                updateCarouselPostImages(item.id, newImages);
+                                if (getPostSlideIndex(item.id) >= newImages.length) setPostSlideIndex(item.id, newImages.length - 1, newImages.length);
+                              }
+                            }} className="bg-orange-500 text-white p-3 rounded-full shadow-2xl hover:scale-110 transition-all" title="מחק תמונה נוכחית">
+                              <X size={20} />
+                            </button>
+                            <button onClick={() => deleteProduct(item.id)} className="bg-red-500 text-white p-3 rounded-full shadow-2xl hover:scale-110 transition-all" title="מחק פוסט שלם">
+                              <Trash2 size={20} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    /* --- כרטיס תמונה בודדת --- */
+                    <div key={item.id} className="group relative bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 aspect-[3/2]">
+                      <img src={item.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 backdrop-blur-[1px]">
+                        {!isEditing ? (
+                          <button onClick={() => setSelectedImage(item.url)} className="bg-white text-black p-4 rounded-full shadow-2xl scale-90 group-hover:scale-100 transition-all"><Maximize2 size={24} /></button>
+                        ) : (
+                          <button onClick={() => deleteProduct(item.id)} className="bg-red-500 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all"><Trash2 size={24} /></button>
+                        )}
+                      </div>
+                    </div>
+                  )
                 ))}
                 {categoryItems.length === 0 && !isUploading && (
                   <div className="col-span-full py-20 text-center text-slate-300 font-bold border-4 border-dashed border-slate-100 rounded-[3rem]">
@@ -438,6 +598,74 @@ const App = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 animate-in fade-in" onClick={() => setSelectedImage(null)}>
           <button className="absolute top-6 right-6 text-white"><X size={40} /></button>
           <img src={selectedImage} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} alt="" />
+        </div>
+      )}
+
+      {/* Carousel Post Creation Modal */}
+      {showCarouselPostModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-lg rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black flex items-center gap-2"><Layers size={22} /> יצירת פוסט קרוסלה</h3>
+              <button onClick={() => { setShowCarouselPostModal(false); setCarouselPostImages([]); }} className="p-2 text-slate-400 hover:text-slate-600"><X size={22} /></button>
+            </div>
+
+            <p className="text-sm text-slate-400 font-bold mb-4">בחר לפחות 2 תמונות שיוצגו כפוסט קרוסלה אחד</p>
+
+            {/* תמונות שנבחרו */}
+            {carouselPostImages.length > 0 && (
+              <div className="flex gap-3 overflow-x-auto pb-3 mb-4">
+                {carouselPostImages.map((img, idx) => (
+                  <div key={idx} className="relative flex-shrink-0 w-28 h-28 rounded-xl overflow-hidden border-2 border-slate-100 group">
+                    <img src={img} className="w-full h-full object-cover" alt="" />
+                    <button
+                      onClick={() => setCarouselPostImages(prev => prev.filter((_, i) => i !== idx))}
+                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 hover:scale-110 transition-all"
+                    >
+                      <X size={12} />
+                    </button>
+                    <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">{idx + 1}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* כפתור הוספת תמונות */}
+            <label className="cursor-pointer flex items-center justify-center gap-2 border-2 border-dashed border-slate-200 hover:border-indigo-300 rounded-2xl py-8 text-slate-400 hover:text-indigo-500 transition-all font-bold">
+              <Plus size={20} /> הוסף תמונות
+              <input type="file" multiple accept="image/*" className="hidden" onChange={handleCarouselPostImageAdd} />
+            </label>
+
+            {carouselPostUploading && (
+              <div className="mt-4 flex items-center gap-2 text-sm text-slate-400 font-bold animate-pulse">
+                <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                מעבד תמונות...
+              </div>
+            )}
+
+            {/* כפתורי פעולה */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={submitCarouselPost}
+                disabled={carouselPostImages.length < 2 || carouselPostUploading}
+                className={`flex-1 py-4 rounded-2xl font-bold shadow-lg transition-all active:scale-95 ${
+                  carouselPostImages.length >= 2 && !carouselPostUploading
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Layers size={18} /> צור פוסט ({carouselPostImages.length} תמונות)
+                </span>
+              </button>
+              <button
+                onClick={() => { setShowCarouselPostModal(false); setCarouselPostImages([]); }}
+                className="px-6 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 transition-all"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
