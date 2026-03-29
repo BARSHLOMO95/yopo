@@ -7,7 +7,8 @@ import {
 } from 'firebase/auth';
 import {
   Edit2, Check, Image as ImageIcon,
-  Trash2, Upload, Plus, ChevronRight, LayoutGrid, X, ExternalLink, ShoppingCart, Maximize2, Lock, LogOut
+  Trash2, Upload, Plus, ChevronRight, LayoutGrid, X, ExternalLink, ShoppingCart, Maximize2, Lock, LogOut,
+  ChevronLeft, GripVertical
 } from 'lucide-react';
 import { db, auth, appId } from './firebase';
 
@@ -50,6 +51,8 @@ const App = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', pass: '' });
   const [loading, setLoading] = useState(true);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [isCarouselView, setIsCarouselView] = useState(false);
 
   // --- התחברות אוטומטית ---
   useEffect(() => {
@@ -175,6 +178,12 @@ const App = () => {
     setIsUploading(false);
   };
 
+  const goToSlide = (index) => {
+    if (index < 0) setCarouselIndex(categoryItems.length - 1);
+    else if (index >= categoryItems.length) setCarouselIndex(0);
+    else setCarouselIndex(index);
+  };
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 font-bold text-slate-400 animate-pulse">
       מתחבר למסד הנתונים...
@@ -269,12 +278,21 @@ const App = () => {
           <section>
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
                <h2 className="text-4xl font-black">{currentCategory?.name}</h2>
-               {isEditing && (
-                 <label className="cursor-pointer bg-black text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg active:scale-95">
-                   <Upload size={20} /> העלאה מרובה
-                   <input type="file" multiple accept="image/*" className="hidden" onChange={handleMultipleUpload} />
-                 </label>
-               )}
+               <div className="flex items-center gap-3">
+                 {/* כפתור מעבר בין גריד לקרוסלה */}
+                 <button
+                   onClick={() => { setIsCarouselView(!isCarouselView); setCarouselIndex(0); }}
+                   className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all ${isCarouselView ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}
+                 >
+                   {isCarouselView ? <><LayoutGrid size={16} /> גריד</> : <><GripVertical size={16} /> קרוסלה</>}
+                 </button>
+                 {isEditing && (
+                   <label className="cursor-pointer bg-black text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg active:scale-95">
+                     <Upload size={20} /> העלאה מרובה
+                     <input type="file" multiple accept="image/*" className="hidden" onChange={handleMultipleUpload} />
+                   </label>
+                 )}
+               </div>
             </div>
 
             <div className="mb-10">
@@ -297,25 +315,120 @@ const App = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {categoryItems.map((item) => (
-                <div key={item.id} className="group relative bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 aspect-[3/2]">
-                  <img src={item.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="" />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 backdrop-blur-[1px]">
-                    {!isEditing ? (
-                      <button onClick={() => setSelectedImage(item.url)} className="bg-white text-black p-4 rounded-full shadow-2xl scale-90 group-hover:scale-100 transition-all"><Maximize2 size={24} /></button>
-                    ) : (
-                      <button onClick={() => deleteProduct(item.id)} className="bg-red-500 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all"><Trash2 size={24} /></button>
-                    )}
+            {isCarouselView && categoryItems.length > 0 ? (
+              /* --- תצוגת קרוסלה --- */
+              <div className="relative">
+                {/* סליידר ראשי */}
+                <div className="relative overflow-hidden rounded-3xl bg-white shadow-lg border border-slate-100">
+                  <div className="relative aspect-[16/9] md:aspect-[2/1]">
+                    {categoryItems.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+                          index === carouselIndex
+                            ? 'opacity-100 scale-100'
+                            : index < carouselIndex
+                              ? 'opacity-0 scale-95 -translate-x-full'
+                              : 'opacity-0 scale-95 translate-x-full'
+                        }`}
+                      >
+                        <img
+                          src={item.url}
+                          className="w-full h-full object-cover"
+                          alt=""
+                        />
+                        {/* אוברליי עם כפתורי פעולה */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
+                          <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-4">
+                            {!isEditing ? (
+                              <button
+                                onClick={() => setSelectedImage(item.url)}
+                                className="bg-white text-black p-4 rounded-full shadow-2xl scale-90 hover:scale-100 transition-all"
+                              >
+                                <Maximize2 size={24} />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => deleteProduct(item.id)}
+                                className="bg-red-500 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all"
+                              >
+                                <Trash2 size={24} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+
+                  {/* חצי ניווט */}
+                  {categoryItems.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => goToSlide(carouselIndex + 1)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm p-3 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all"
+                      >
+                        <ChevronRight size={24} />
+                      </button>
+                      <button
+                        onClick={() => goToSlide(carouselIndex - 1)}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm p-3 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all"
+                      >
+                        <ChevronLeft size={24} />
+                      </button>
+                    </>
+                  )}
                 </div>
-              ))}
-              {categoryItems.length === 0 && !isUploading && (
-                <div className="col-span-full py-20 text-center text-slate-300 font-bold border-4 border-dashed border-slate-100 rounded-[3rem]">
-                   הקטגוריה ריקה. העלה תמונות במצב עריכה.
+
+                {/* מונה תמונות */}
+                <div className="text-center mt-4 text-sm font-bold text-slate-400">
+                  {carouselIndex + 1} / {categoryItems.length}
                 </div>
-              )}
-            </div>
+
+                {/* תצוגת תמונות ממוזערות */}
+                <div className="flex gap-3 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+                  {categoryItems.map((item, index) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setCarouselIndex(index)}
+                      className={`relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+                        index === carouselIndex
+                          ? 'border-black scale-105 shadow-lg'
+                          : 'border-transparent scale-95 opacity-60 hover:opacity-100 hover:scale-100'
+                      }`}
+                    >
+                      <img src={item.url} className="w-full h-full object-cover" alt="" />
+                      {isEditing && index === carouselIndex && (
+                        <div className="absolute inset-0 bg-red-500/0 hover:bg-red-500/40 transition-all flex items-center justify-center">
+                          <Trash2 size={14} className="text-white opacity-0 hover:opacity-100" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* --- תצוגת גריד --- */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {categoryItems.map((item) => (
+                  <div key={item.id} className="group relative bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 aspect-[3/2]">
+                    <img src={item.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 backdrop-blur-[1px]">
+                      {!isEditing ? (
+                        <button onClick={() => setSelectedImage(item.url)} className="bg-white text-black p-4 rounded-full shadow-2xl scale-90 group-hover:scale-100 transition-all"><Maximize2 size={24} /></button>
+                      ) : (
+                        <button onClick={() => deleteProduct(item.id)} className="bg-red-500 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all"><Trash2 size={24} /></button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {categoryItems.length === 0 && !isUploading && (
+                  <div className="col-span-full py-20 text-center text-slate-300 font-bold border-4 border-dashed border-slate-100 rounded-[3rem]">
+                     הקטגוריה ריקה. העלה תמונות במצב עריכה.
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         )}
       </main>
