@@ -1,0 +1,190 @@
+{
+  "name": "Morning Financial Summary (Hebrew)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * 0-4"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [220, 300],
+      "notes": "Runs every day Sun-Thu at 07:00 (Israel trading days)"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://query1.finance.yahoo.com/v7/finance/quote",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "symbols",
+              "value": "USDILS=X,EURILS=X,^IXIC,^GSPC,^TA35.TA,^TA125.TA,GC=F,CL=F"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "yahoo-finance",
+      "name": "Yahoo Finance API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 200],
+      "notes": "Fetch forex, indices, commodities from Yahoo Finance"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.coingecko.com/api/v3/simple/price",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ids",
+              "value": "bitcoin,ethereum"
+            },
+            {
+              "name": "vs_currencies",
+              "value": "usd"
+            },
+            {
+              "name": "include_24hr_change",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "coingecko",
+      "name": "CoinGecko API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 420],
+      "notes": "Fetch crypto prices from CoinGecko"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "merge-data",
+      "name": "Merge Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========== Format Financial Summary ==========\n\nconst items = $input.all();\n\n// Get Yahoo Finance data (first input)\nconst yahooData = items[0]?.json?.quoteResponse?.result || items[0]?.json || [];\n\n// Get CoinGecko data (second input)\nlet cryptoData = {};\nfor (const item of items) {\n  if (item.json?.bitcoin || item.json?.ethereum) {\n    cryptoData = item.json;\n    break;\n  }\n}\n\n// If yahooData is a single object (from merge), try to extract\nlet quotes = [];\nif (Array.isArray(yahooData)) {\n  quotes = yahooData;\n} else if (yahooData?.quoteResponse?.result) {\n  quotes = yahooData.quoteResponse.result;\n}\n\n// Build quote map\nconst quoteMap = {};\nfor (const q of quotes) {\n  if (q?.symbol) {\n    quoteMap[q.symbol] = {\n      price: q.regularMarketPrice,\n      change: q.regularMarketChangePercent,\n    };\n  }\n}\n\n// Helper functions\nfunction fmt(num, dec = 2) {\n  if (num == null || isNaN(num)) return 'N/A';\n  return Number(num).toLocaleString('en-US', {\n    minimumFractionDigits: dec,\n    maximumFractionDigits: dec,\n  });\n}\n\nfunction arrow(ch) {\n  if (ch == null || isNaN(ch)) return '➡️';\n  return ch >= 0 ? '📈' : '📉';\n}\n\nfunction chg(ch) {\n  if (ch == null || isNaN(ch)) return 'N/A';\n  const s = ch >= 0 ? '+' : '';\n  return `${s}${ch.toFixed(2)}%`;\n}\n\nconst days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];\nconst months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];\nconst now = new Date();\nconst dateStr = `יום ${days[now.getDay()]}, ${now.getDate()} ב${months[now.getMonth()]} ${now.getFullYear()}`;\n\n// Build lines\nfunction line(symbol, name, dec = 2) {\n  const q = quoteMap[symbol] || {};\n  return `${arrow(q.change)} ${name}: ${fmt(q.price, dec)} (${chg(q.change)})`;\n}\n\nfunction cryptoLine(id, name) {\n  const c = cryptoData[id] || {};\n  return `${arrow(c.usd_24h_change)} ${name}: ${fmt(c.usd)} (${chg(c.usd_24h_change)})`;\n}\n\nconst message = `☀️ סקירת בוקר פיננסית\n${dateStr}\n\n💱 מט\"ח:\n${line('USDILS=X', 'דולר/שקל', 3)}\n${line('EURILS=X', 'יורו/שקל', 3)}\n\n📊 מדדים:\n${line('^IXIC', 'נאסד\"ק')}\n${line('^GSPC', 'S&P 500')}\n${line('^TA35.TA', 'ת\"א 35')}\n${line('^TA125.TA', 'ת\"א 125')}\n\n🏆 סחורות:\n${line('GC=F', 'זהב')}\n${line('CL=F', 'נפט')}\n\n₿ קריפטו:\n${cryptoLine('bitcoin', 'ביטקוין')}\n${cryptoLine('ethereum', 'אתריום')}\n\nנוצר אוטומטית | סקירה זו אינה מהווה המלצת השקעה`;\n\nreturn [{ json: { message, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "format-message",
+      "name": "Format Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 300],
+      "notes": "Format all data into Hebrew financial summary"
+    },
+    {
+      "parameters": {},
+      "id": "no-op-output",
+      "name": "Output",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1180, 300],
+      "notes": "Connect this to your messaging node (Telegram, WhatsApp, Slack, Email, etc.)\nUse {{ $json.message }} to get the formatted text"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          { "node": "Yahoo Finance API", "type": "main", "index": 0 },
+          { "node": "CoinGecko API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Yahoo Finance API": {
+      "main": [
+        [
+          { "node": "Merge Data", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "CoinGecko API": {
+      "main": [
+        [
+          { "node": "Merge Data", "type": "main", "index": 1 }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          { "node": "Format Message", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Message": {
+      "main": [
+        [
+          { "node": "Output", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "finance" },
+    { "name": "hebrew" },
+    { "name": "morning-summary" }
+  ],
+  "triggerCount": 1
+}
